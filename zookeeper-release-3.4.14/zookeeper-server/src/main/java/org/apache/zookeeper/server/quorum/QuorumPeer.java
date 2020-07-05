@@ -713,7 +713,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     	//TODO  先留一个问题->
         for (QuorumServer p : getView().values()) {
             if (p.id == myid) {
-                myQuorumAddr = p.addr; //地址： 1 ->myQuorumAddr=192.168.13.102
+                myQuorumAddr = p.addr; //地址： 1 ->myQuorumAddr=127.0.0.1
                 break;
             }
         }
@@ -825,7 +825,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             le = new AuthFastLeaderElection(this, true);
             break;
         case 3:
-            //跟选举有关系，用来接收投票的。 This class implements a connection manager for leader election using TCP.
+            //跟选举有关系，用来发送（sendWorker）和接收（recvWorker）投票的。 This class implements a connection manager for leader election using TCP.
             qcm = createCnxnManager();
             QuorumCnxManager.Listener listener = qcm.listener;
             if(listener != null){
@@ -908,7 +908,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         try {
             /*
              * Main loop
-             * 死循环
+             * 死循环 自旋
              */
             while (running) {
                 switch (getPeerState()) {//第一次启动的时候，LOOKING

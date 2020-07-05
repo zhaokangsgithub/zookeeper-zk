@@ -131,7 +131,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 if (Request.requestOfDeath == request) {
                     break;
                 }
-                pRequest(request);
+                pRequest(request); //逻辑集中在pRequest中
             }
         } catch (RequestProcessorException e) {
             if (e.getCause() instanceof XidRolloverException) {
@@ -324,7 +324,8 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         switch (type) {
             case OpCode.create:                
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
-                CreateRequest createRequest = (CreateRequest)record;   
+                CreateRequest createRequest = (CreateRequest)record;
+                // 序列化成 CreateRequest
                 if(deserialize)
                     ByteBufferInputStream.byteBuffer2Record(request.request, createRequest);
                 String path = createRequest.getPath();
@@ -362,6 +363,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                     throw new KeeperException.NoChildrenForEphemeralsException(path);
                 }
                 int newCversion = parentRecord.stat.getCversion()+1;
+                // 封装path、data、cVersion等数据到txn里
                 request.txn = new CreateTxn(path, createRequest.getData(),
                         listACL,
                         createMode.isEphemeral(), newCversion);
@@ -678,6 +680,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
             }
         }
         request.zxid = zks.getZxid();
+        // 责任链执行下一个节点
         nextProcessor.processRequest(request);
     }
 
@@ -762,6 +765,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
 
     public void processRequest(Request request) {
         // request.addRQRec(">prep="+zks.outstandingChanges.size());
+        // run() take,处理逻辑都在run方法
         submittedRequests.add(request);
     }
 

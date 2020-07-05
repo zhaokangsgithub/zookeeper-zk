@@ -655,7 +655,7 @@ public class ClientCnxn {
             }
         } else {
             p.finished = true;
-            eventThread.queuePacket(p);
+            eventThread.queuePacket(p);// packet最终通过eventThread异步放入到等待通知队列中
         }
     }
 
@@ -765,6 +765,7 @@ public class ClientCnxn {
             }
             if (replyHdr.getXid() == -1) {
                 // -1 means notification
+                // 服务端响应： notification
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Got notification sessionid:0x"
                         + Long.toHexString(sessionId));
@@ -1137,7 +1138,7 @@ public class ClientCnxn {
                         }
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
-
+                    // socket数据传输，核心方法
                     clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, ClientCnxn.this);
                 } catch (Throwable e) {
                     if (closing) {
@@ -1396,6 +1397,7 @@ public class ClientCnxn {
         return xid++;
     }
 
+    // 客户端的cnxn 发送请求出去
     public ReplyHeader submitRequest(RequestHeader h, Record request,
             Record response, WatchRegistration watchRegistration)
             throws InterruptedException {
@@ -1440,6 +1442,7 @@ public class ClientCnxn {
         // Note that we do not generate the Xid for the packet yet. It is
         // generated later at send-time, by an implementation of ClientCnxnSocket::doIO(),
         // where the packet is actually sent.
+        // 将packet包数据add到outgoingQueue，交给sendThread异步处理
         synchronized (outgoingQueue) {
             packet = new Packet(h, r, request, response, watchRegistration);
             packet.cb = cb;
@@ -1454,7 +1457,7 @@ public class ClientCnxn {
                 if (h.getType() == OpCode.closeSession) {
                     closing = true;
                 }
-                outgoingQueue.add(packet);
+                outgoingQueue.add(packet); // 添加异步处理
             }
         }
         sendThread.getClientCnxnSocket().wakeupCnxn();

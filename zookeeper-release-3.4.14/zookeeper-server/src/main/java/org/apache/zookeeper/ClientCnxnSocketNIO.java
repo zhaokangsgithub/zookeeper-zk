@@ -64,6 +64,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
+        // 客户端收到服务端的响应
         if (sockKey.isReadable()) {
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
@@ -78,6 +79,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     recvCount++;
                     readLength();
                 } else if (!initialized) {
+                    // 没有init 需要初始化连接
                     readConnectResult();
                     enableRead();
                     if (findSendablePacket(outgoingQueue,
@@ -91,6 +93,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     updateLastHeard();
                     initialized = true;
                 } else {
+
                     sendThread.readResponse(incomingBuffer);
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;
@@ -98,8 +101,9 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
         }
-        if (sockKey.isWritable()) {
+        if (sockKey.isWritable()) { // 客户端 写请求
             synchronized(outgoingQueue) {
+                // 拿到队列中的packet数据包
                 Packet p = findSendablePacket(outgoingQueue,
                         cnxn.sendThread.clientTunneledAuthenticationInProgress());
 
@@ -112,9 +116,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                                 (p.requestHeader.getType() != OpCode.auth)) {
                             p.requestHeader.setXid(cnxn.getXid());
                         }
+                        // 最终的数据是以ByteBuffer的形式来发送，创建
                         p.createBB();
                     }
-                    sock.write(p.bb);
+                    sock.write(p.bb); // socket写出去，服务端接收socket的流信息
                     if (!p.bb.hasRemaining()) {
                         sentCount++;
                         outgoingQueue.removeFirstOccurrence(p);
@@ -363,6 +368,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+                // socket的读和写事件
                 doIO(pendingQueue, outgoingQueue, cnxn);
             }
         }

@@ -115,10 +115,10 @@ public class FinalRequestProcessor implements RequestProcessor {
             if (request.hdr != null) {
                TxnHeader hdr = request.hdr;
                Record txn = request.txn;
-
+               //保存请求，将数据保存到dataTree内，进内存，触发watch等
                rc = zks.processTxn(hdr, txn);
             }
-            // do not add non quorum packets to the queue.
+            // do not add non quorum packets to the queue. 发送Proposal?? 但是上面已经commit了
             if (Request.isQuorum(request.type)) {
                 zks.getZKDatabase().addCommittedProposal(request);
             }
@@ -184,7 +184,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 zks.finishSessionInit(request.cnxn, true);
                 return;
             }
-            case OpCode.multi: {
+            case OpCode.multi: { // 还可以有组合请求?
                 lastOp = "MULT";
                 rsp = new MultiResponse() ;
 
@@ -219,7 +219,7 @@ public class FinalRequestProcessor implements RequestProcessor {
             }
             case OpCode.create: {
                 lastOp = "CREA";
-                rsp = new CreateResponse(rc.path);
+                rsp = new CreateResponse(rc.path); //构建响应，返回给客户端
                 err = Code.get(rc.err);
                 break;
             }
@@ -270,6 +270,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 if (path.indexOf('\0') != -1) {
                     throw new KeeperException.BadArgumentsException();
                 }
+                // 如果存在watch的话，就传入cnxn，否则就是null
                 Stat stat = zks.getZKDatabase().statNode(path, existsRequest
                         .getWatch() ? cnxn : null);
                 rsp = new ExistsResponse(stat);

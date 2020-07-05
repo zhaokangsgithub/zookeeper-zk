@@ -430,6 +430,7 @@ public class DataTree {
             updateCount(lastPrefix, 1);
             updateBytes(lastPrefix, data == null ? 0 : data.length);
         }
+        // 触发watch
         dataWatches.triggerWatch(path, Event.EventType.NodeCreated);
         childWatches.triggerWatch(parentName.equals("") ? "/" : parentName,
                 Event.EventType.NodeChildrenChanged);
@@ -575,6 +576,7 @@ public class DataTree {
         Stat stat = new Stat();
         DataNode n = nodes.get(path);
         if (watcher != null) {
+            // 保存watch到dataWatches
             dataWatches.addWatch(path, watcher);
         }
         if (n == null) {
@@ -788,9 +790,9 @@ public class DataTree {
                         assert(record != null);
 
                         ByteBufferInputStream.byteBuffer2Record(bb, record);
-                       
+
                         if (failed && subtxn.getType() != OpCode.error){
-                            int ec = post_failed ? Code.RUNTIMEINCONSISTENCY.intValue() 
+                            int ec = post_failed ? Code.RUNTIMEINCONSISTENCY.intValue()
                                                  : Code.OK.intValue();
 
                             subtxn.setType(OpCode.error);
@@ -802,7 +804,7 @@ public class DataTree {
                         }
 
                         TxnHeader subHdr = new TxnHeader(header.getClientId(), header.getCxid(),
-                                                         header.getZxid(), header.getTime(), 
+                                                         header.getZxid(), header.getTime(),
                                                          subtxn.getType());
                         ProcessTxnResult subRc = processTxn(subHdr, record);
                         rc.multiResult.add(subRc);

@@ -208,7 +208,7 @@ public class NIOServerCnxn extends ServerCnxn {
             if (!initialized) {
                 readConnectRequest();
             } else {
-                readRequest();
+                readRequest(); // 处理读请求
             }
             lenBuffer.clear();
             incomingBuffer = lenBuffer;
@@ -242,7 +242,7 @@ public class NIOServerCnxn extends ServerCnxn {
 
                 return;
             }
-            if (k.isReadable()) {
+            if (k.isReadable()) { //读请求,接受客户端的写请求
                 int rc = sock.read(incomingBuffer);
                 if (rc < 0) {
                     throw new EndOfStreamException(
@@ -261,6 +261,7 @@ public class NIOServerCnxn extends ServerCnxn {
                         isPayload = true;
                     }
                     if (isPayload) { // not the case for 4letterword
+                        // 读取有效的请求
                         readPayload();
                     }
                     else {
@@ -270,7 +271,7 @@ public class NIOServerCnxn extends ServerCnxn {
                     }
                 }
             }
-            if (k.isWritable()) {
+            if (k.isWritable()) { // 处理写请求
                 // ZooLog.logTraceMessage(LOG,
                 // ZooLog.CLIENT_DATA_PACKET_TRACE_MASK
                 // "outgoingBuffers.size() = " +

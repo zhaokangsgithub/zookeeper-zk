@@ -123,6 +123,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
             setRandRoll(r.nextInt(snapCount/2));
             while (true) {
                 Request si = null;
+                // 获取数据
                 if (toFlush.isEmpty()) {
                     si = queuedRequests.take();
                 } else {
@@ -143,7 +144,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                             setRandRoll(r.nextInt(snapCount/2));
                             // roll the log
                             zks.getZKDatabase().rollLog();
-                            // take a snapshot
+                            // take a snapshot 开启一个快照线程，保存信息到快照日志中
                             if (snapInProcess != null && snapInProcess.isAlive()) {
                                 LOG.warn("Too busy to snap, skipping");
                             } else {

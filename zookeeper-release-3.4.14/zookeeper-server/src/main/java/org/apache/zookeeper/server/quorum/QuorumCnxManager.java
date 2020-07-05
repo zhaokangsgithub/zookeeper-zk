@@ -203,7 +203,8 @@ public class QuorumCnxManager {
         initializeAuth(mySid, authServer, authLearner, quorumCnxnThreadsSize,
                 quorumSaslAuthEnabled);
 
-        // Starts listener thread that waits for connection requests 
+        // Starts listener thread that waits for connection requests
+        // 开启一个socket，供集群内部连接通信
         listener = new Listener();
     }
 
@@ -343,6 +344,7 @@ public class QuorumCnxManager {
         authLearner.authenticate(sock, view.get(sid).hostname);
 
         // If lost the challenge, then drop the new connection
+        // 只能大的sid发给小的sid
         if (sid > this.mySid) {
             LOG.info("Have smaller server identifier, so dropping the " +
                      "connection: (" + sid + ", " + this.mySid + ")");
@@ -513,6 +515,7 @@ public class QuorumCnxManager {
     public void toSend(Long sid, ByteBuffer b) {
         /*
          * If sending message to myself, then simply enqueue it (loopback).
+         * 发给自己，不需要走网络通信，直接发给recvQueue即可
          */
         if (this.mySid == sid) {
              b.position(0);

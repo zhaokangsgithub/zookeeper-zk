@@ -1101,7 +1101,7 @@ public class ZooKeeper {
         h.setType(ZooDefs.OpCode.exists);
         ExistsRequest request = new ExistsRequest();
         request.setPath(serverPath);
-        request.setWatch(watcher != null);
+        request.setWatch(watcher != null); // 客户端携带的watch是true和false
         SetDataResponse response = new SetDataResponse();
         ReplyHeader r = cnxn.submitRequest(h, request, response, wcb);
         if (r.getErr() != 0) {

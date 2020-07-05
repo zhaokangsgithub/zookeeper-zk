@@ -148,7 +148,7 @@ public class VerGen {
      *            </ul>
      */
     public static void main(String[] args) {
-        /*if (args.length != 3)
+        if (args.length != 3)
             printUsage();
         try {
             Version version = parseVersionString(args[0]);
@@ -172,7 +172,7 @@ public class VerGen {
             System.out.println("Unable to generate version.Info file: "
                     + e.getMessage());
             System.exit(1);
-        }*/
+        }
     }
 
 }

@@ -749,7 +749,8 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             touch(si.cnxn);
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
-                // 在setup方法中构建的链信息 PrepRequestProcessor(SyncRequestProcessor(FinalRequestProcessor))
+                // 在setup方法中构建的链信息
+                // PrepRequestProcessor(SyncRequestProcessor(FinalRequestProcessor))
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
                     incInProcess();
@@ -966,7 +967,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         InputStream bais = new ByteBufferInputStream(incomingBuffer);
         BinaryInputArchive bia = BinaryInputArchive.getArchive(bais);
         RequestHeader h = new RequestHeader();
-        h.deserialize(bia, "header");//序列化到header中
+        h.deserialize(bia, "header");// 将请求的流bia 序列化到header中
         // Through the magic of byte buffers, txn will not be
         // pointing
         // to the start of the txn

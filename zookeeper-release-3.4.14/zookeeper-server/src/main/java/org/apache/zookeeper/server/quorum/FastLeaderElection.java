@@ -832,7 +832,7 @@ public class FastLeaderElection implements Election {
                  * Remove next notification from queue, times out after 2 times
                  * the termination time
                  */
-                //recvqueue是从网络上接收到的其他机器的Notification
+                //recvqueue 接收到的其他机器的消息
                 Notification n = recvqueue.poll(notTimeout,
                         TimeUnit.MILLISECONDS);
 
@@ -842,7 +842,7 @@ public class FastLeaderElection implements Election {
                  */
                 if(n == null){
                     if(manager.haveDelivered()){
-                        sendNotifications();
+                        sendNotifications(); // 重新发送
                     } else {
                         manager.connectAll();//重新连接集群中的所有节点
                     }
@@ -863,6 +863,7 @@ public class FastLeaderElection implements Election {
                      */
                     switch (n.state) {
                     case LOOKING: //第一次进入到这个case
+                         // vote: epoch  zxid  myid
                         // If notification > current, replace and send messages out 当收到的epoche>当前，选对方为leader
                         if (n.electionEpoch > logicalclock.get()) { //
                             logicalclock.set(n.electionEpoch);
