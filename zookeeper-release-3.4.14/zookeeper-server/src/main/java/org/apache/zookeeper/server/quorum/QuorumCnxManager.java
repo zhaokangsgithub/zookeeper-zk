@@ -124,6 +124,7 @@ public class QuorumCnxManager {
      * Mapping from Peer to Thread number
      */
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
+    // 隔离节点和节点之间，数据放在不同的BlockingQueue里 要通过sendWorker发送的数据，都会存在这个queue中
     final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;
     final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
 
@@ -431,7 +432,7 @@ public class QuorumCnxManager {
         try {
             // Read server id
             sid = din.readLong();
-            if (sid < 0) { // this is not a server id but a protocol version (see ZOOKEEPER-1633)
+            if (sid < 0) { // this is not a server id but a protocol version (see ZOOKEEPER-1633) 不是server id
                 sid = din.readLong();
 
                 // next comes the #bytes in the remainder of the message
@@ -468,6 +469,7 @@ public class QuorumCnxManager {
         LOG.debug("Authenticating learner server.id: {}", sid);
         authServer.authenticate(sock, din);
 
+        // zookeeper 设置节点之间的连接，只能是大的sid和小的通信
         //If wins the challenge, then close the new connection.
         if (sid < this.mySid) {
             /*
@@ -727,7 +729,7 @@ public class QuorumCnxManager {
             InetSocketAddress addr;
             while((!shutdown) && (numRetries < 3)){
                 try {
-                    ss = new ServerSocket(); //不是NIO， socket io
+                    ss = new ServerSocket(); //不是NIO， 原生socket io，可能考虑集群内部不会太大
                     ss.setReuseAddress(true);
                     if (listenOnAllIPs) {
                         int port = view.get(QuorumCnxManager.this.mySid)
@@ -755,6 +757,7 @@ public class QuorumCnxManager {
                         if (quorumSaslAuthEnabled) {
                             receiveConnectionAsync(client);
                         } else {
+                            // 处理请求，构建sendWorker和recvWorker
                             receiveConnection(client);
                         }
 
@@ -909,7 +912,7 @@ public class QuorumCnxManager {
                  * message than that stored in lastMessage. To avoid sending
                  * stale message, we should send the message in the send queue.
                  */
-                ArrayBlockingQueue<ByteBuffer> bq = queueSendMap.get(sid);
+                ArrayBlockingQueue<ByteBuffer> bq = queueSendMap.get(sid);// 隔离节点和节点之间，数据放在不同的queue里
                 if (bq == null || isSendQueueEmpty(bq)) {
                    ByteBuffer b = lastMessageSent.get(sid);
                    if (b != null) {
@@ -930,6 +933,7 @@ public class QuorumCnxManager {
                         ArrayBlockingQueue<ByteBuffer> bq = queueSendMap
                                 .get(sid);
                         if (bq != null) {
+                            // queue.poll 从阻塞队列中获取
                             b = pollSendQueue(bq, 1000, TimeUnit.MILLISECONDS);
                         } else {
                             LOG.error("No queue of incoming messages for " +
@@ -939,6 +943,7 @@ public class QuorumCnxManager {
 
                         if(b != null){
                             lastMessageSent.put(sid, b);
+                            // socket 发送出去
                             send(b);
                         }
                     } catch (InterruptedException e) {

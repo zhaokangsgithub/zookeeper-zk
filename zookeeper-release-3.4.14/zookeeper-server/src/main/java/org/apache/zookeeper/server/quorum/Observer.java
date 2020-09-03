@@ -64,6 +64,7 @@ public class Observer extends Learner{
             QuorumServer leaderServer = findLeader();
             LOG.info("Observing " + leaderServer.addr);
             try {
+                // 建立连接 构建socket和leader交互
                 connectToLeader(leaderServer.addr, leaderServer.hostname);
                 long newLeaderZxid = registerWithLeader(Leader.OBSERVERINFO);
 

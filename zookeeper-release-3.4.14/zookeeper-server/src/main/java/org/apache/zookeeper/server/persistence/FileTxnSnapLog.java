@@ -210,6 +210,7 @@ public class FileTxnSnapLog {
                     highestZxid = hdr.getZxid();
                 }
                 try {
+                    // 执行事务操作，数据进内存
                     processTransaction(hdr,dt,sessions, itr.getTxn());
                 } catch(KeeperException.NoNodeException e) {
                    throw new IOException("Failed to process transaction type: " +

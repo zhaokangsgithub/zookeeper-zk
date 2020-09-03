@@ -335,7 +335,7 @@ public class Learner {
             else if (qp.getType() == Leader.SNAP) {
                 LOG.info("Getting a snapshot from leader 0x" + Long.toHexString(qp.getZxid()));
                 // The leader is going to dump the database
-                // clear our own database and read
+                // clear our own database and read 快照同步，clear自己的数据，用leader的
                 zk.getZKDatabase().clear();
                 zk.getZKDatabase().deserializeSnapshot(leaderIs);
                 String signature = leaderIs.readString("signature");
@@ -345,7 +345,7 @@ public class Learner {
                 }
                 zk.getZKDatabase().setlastProcessedZxid(qp.getZxid());
             } else if (qp.getType() == Leader.TRUNC) {
-                //we need to truncate the log to the lastzxid of the leader
+                //we need to truncate the log to the lastzxid of the leader 截断日志到leader的lastzxid
                 LOG.warn("Truncating log to get in sync with the leader 0x"
                         + Long.toHexString(qp.getZxid()));
                 boolean truncated=zk.getZKDatabase().truncateLog(qp.getZxid());
@@ -377,7 +377,7 @@ public class Learner {
             // we are now going to start getting transactions to apply followed by an UPTODATE
             outerLoop:
             while (self.isRunning()) {
-                readPacket(qp);
+                readPacket(qp); // 流中读取数据
                 switch(qp.getType()) {
                 case Leader.PROPOSAL:
                     PacketInFlight pif = new PacketInFlight();
@@ -390,10 +390,12 @@ public class Learner {
                             + Long.toHexString(lastQueued + 1));
                     }
                     lastQueued = pif.hdr.getZxid();
+                    // 将流的数据封装，放入list中
                     packetsNotCommitted.add(pif);
                     break;
                 case Leader.COMMIT:
                     if (!writeToTxnLog) {
+                        // proposal时封装的数据取出，做事物请求
                         pif = packetsNotCommitted.peekFirst();
                         if (pif.hdr.getZxid() != qp.getZxid()) {
                             LOG.warn("Committing " + qp.getZxid() + ", but next proposal is " + pif.hdr.getZxid());
@@ -409,6 +411,7 @@ public class Learner {
                     /*
                      * Only observer get this type of packet. We treat this
                      * as receiving PROPOSAL and COMMMIT.
+                     * 给observer，替代proposal和commit使用
                      */
                     PacketInFlight packet = new PacketInFlight();
                     packet.hdr = new TxnHeader();

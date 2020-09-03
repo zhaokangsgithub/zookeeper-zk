@@ -633,19 +633,20 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     
     @Override
     public synchronized void start() {
-        loadDataBase(); //加载数据()
-        cnxnFactory.start();      //cnxnFacotory?  跟通信有关系. ->暴露一个2181的端口号
+        loadDataBase(); //加载数据到内存，获取epoche
+        cnxnFactory.start();    //cnxnFacotory?  跟通信有关系  -> 暴露一个2181的端口号
         startLeaderElection();  //开始leader选举-> 启动一个投票的监听、初始化一个选举算法FastLeader.
-        super.start(); //当前的QuorumPeer继承Thread，调用Thread.start() ->QuorumPeer.run()
+        super.start(); //@link run()当前的QuorumPeer继承Thread，调用Thread.start() ->QuorumPeer.run()
     }
 
     private void loadDataBase() {
+        // 根据dataDir，获取对应的数据文件
         File updating = new File(getTxnFactory().getSnapDir(),
                                  UPDATING_EPOCH_FILENAME);
 		try {
             zkDb.loadDataBase();
 
-            // load the epochs
+            // load the epochs 根据zxid拿到epochs
             long lastProcessedZxid = zkDb.getDataTree().lastProcessedZxid;
     		long epochOfZxid = ZxidUtils.getEpochFromZxid(lastProcessedZxid);
             try {
@@ -710,10 +711,10 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     		re.setStackTrace(e.getStackTrace());
     		throw re;
     	}
-    	//TODO  先留一个问题->
+    	//  getView(): quorumPeers --> config.getServers() 配置文件配置的server id
         for (QuorumServer p : getView().values()) {
             if (p.id == myid) {
-                myQuorumAddr = p.addr; //地址： 1 ->myQuorumAddr=127.0.0.1
+                myQuorumAddr = p.addr; //地址： 1 ->myQuorumAddr=192.168.13.102
                 break;
             }
         }
@@ -825,6 +826,26 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             le = new AuthFastLeaderElection(this, true);
             break;
         case 3:
+            /**
+             *
+             * FastLeaderElection
+             *   WorkerSender 发送者
+             * 	    sendqueue.poll
+             * 	    (queueSendMap.get(sid))  ArrayBlockingQueue<ByteBuffer> queue.add
+             *
+             *   WorkerReceiver 接收者
+             * 	    recvQueue.poll
+             * 	    recvqueue.offer(n);
+             *
+             * QuorumCnxManager
+             *   SendWorker 发送者
+             * 	    b= ArrayBlockingQueue<ByteBuffer> queue.poll
+             * 	    send（b） socket写
+             *
+             *   RecvWorker 接收者
+             * 	    读socket数据
+             * 	    recvQueue.add
+             */
             //跟选举有关系，用来发送（sendWorker）和接收（recvWorker）投票的。 This class implements a connection manager for leader election using TCP.
             qcm = createCnxnManager();
             QuorumCnxManager.Listener listener = qcm.listener;

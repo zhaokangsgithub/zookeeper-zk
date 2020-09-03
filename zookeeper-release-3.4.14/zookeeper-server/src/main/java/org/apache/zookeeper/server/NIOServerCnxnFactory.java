@@ -86,7 +86,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         maxClientCnxns = maxcc;
         this.ss = ServerSocketChannel.open();
         ss.socket().setReuseAddress(true);//端口可复用
-        LOG.info("binding to port " + addr);
+        LOG.info("binding to port " + addr);//addr 0.0.0.0/0.0.0.0:2181
         ss.socket().bind(addr); //绑定ip和端口
         ss.configureBlocking(false); //非阻塞
         ss.register(selector, SelectionKey.OP_ACCEPT); //注册一个accept

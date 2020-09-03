@@ -35,6 +35,7 @@ import org.apache.zookeeper.server.quorum.QuorumCnxManager.Message;
 import org.apache.zookeeper.server.quorum.QuorumPeer.LearnerType;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 import org.apache.zookeeper.server.quorum.QuorumPeer.ServerState;
+import org.apache.zookeeper.server.quorum.flexible.QuorumMaj;
 import org.apache.zookeeper.server.util.ZxidUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -642,14 +643,14 @@ public class FastLeaderElection implements Election {
         /*
          * First make the views consistent. Sometimes peers will have
          * different zxids for a server depending on timing.
-         *
+         * 根据所有接收的数据列表，将同样选择该服务的票汇总
          */
         for (Map.Entry<Long,Vote> entry : votes.entrySet()) {
-            if (vote.equals(entry.getValue())){ //对票据进行归纳
-                set.add(entry.getKey()); //如果存在2票，set里面是不是有2个？
+            if (vote.equals(entry.getValue())){ //对票据进行归纳，选择该节点的票据归类
+                set.add(entry.getKey());
             }
         }
-
+    // quorumVerifier = new QuorumMaj(servers.size());
         return self.getQuorumVerifier().containsQuorum(set); //验证
     }
 
@@ -855,8 +856,8 @@ public class FastLeaderElection implements Election {
                             tmpTimeOut : maxNotificationInterval);
                     LOG.info("Notification time out: " + notTimeout);
                 }
-
-                else if(validVoter(n.sid) && validVoter(n.leader)) {//判断是否是一个有效的票据
+                //判断是否是一个有效的票据 校验sid和leader是否在server列表中
+                else if(validVoter(n.sid) && validVoter(n.leader)) {
                     /*
                      * Only proceed if the vote comes from a replica in the
                      * voting view for a replica in the voting view.
@@ -883,13 +884,14 @@ public class FastLeaderElection implements Election {
                             }
                             //继续发送通知
                             sendNotifications();
-                        } else if (n.electionEpoch < logicalclock.get()) { //说明当前的数据已经过期了
+                        } else if (n.electionEpoch < logicalclock.get()) { //说明当前收到的数据已经过期了
                             if(LOG.isDebugEnabled()){
                                 LOG.debug("Notification election epoch is smaller than logicalclock. n.electionEpoch = 0x"
                                         + Long.toHexString(n.electionEpoch)
                                         + ", logicalclock=0x" + Long.toHexString(logicalclock.get()));
                             }
                             break;
+                        // epoche 相等，直接进行battle
                         } else if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch,
                                 proposedLeader, proposedZxid, proposedEpoch)) {
                             updateProposal(n.leader, n.zxid, n.peerEpoch);
@@ -902,7 +904,7 @@ public class FastLeaderElection implements Election {
                                     ", proposed zxid=0x" + Long.toHexString(n.zxid) +
                                     ", proposed election epoch=0x" + Long.toHexString(n.electionEpoch));
                         }
-
+                        // 将所有收到的数据，进行归类，每个sid存一份最新的票据
                         recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));
                         //决断时刻（当前节点的更新后的vote信息，和recvset集合中的票据进行归纳，）
                         if (termPredicate(recvset,
